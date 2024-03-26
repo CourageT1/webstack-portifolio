@@ -12,9 +12,10 @@ Author: OpenAI
 from flask import Flask, jsonify, render_template, request, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
-from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required
+from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from flask_bcrypt import Bcrypt
 from werkzeug.security import generate_password_hash
+from datetime import datetime
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///quiz_app.db'
@@ -33,6 +34,15 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(100), unique=True)
     password_hash = db.Column(db.String(100))
+    score = db.relationship('Score', backref='user', lazy=True)
+
+class Score(db.Model):
+    """Database model for user scores."""
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    subject = db.Column(db.String(100))
+    score = db.Column(db.Integer)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
 
 # Registration route
@@ -121,6 +131,28 @@ def index():
     """
     return render_template('index.html')
 
+# API endpoint to submit quiz results
+@app.route('/api/submit_quiz', methods=['POST'])
+@login_required
+def submit_quiz():
+    """Submit quiz results."""
+    data = request.json
+    subject = data.get('subject')
+    correct_answers = data.get('correct_answers')
+    score = len(correct_answers)  # Calculate score based on the number of correct answers
+    new_score = Score(user_id=current_user.id, subject=subject, score=score)
+    db.session.add(new_score)
+    db.session.commit()
+    return jsonify({'success': True})
+
+# API endpoint to fetch user scores
+@app.route('/api/user_scores')
+@login_required
+def user_scores():
+    """Fetch user scores."""
+    scores = Score.query.filter_by(user_id=current_user.id).all()
+    scores_data = [{'id': score.id, 'subject': score.subject, 'score': score.score, 'timestamp': score.timestamp} for score in scores]
+    return jsonify({'success': True, 'scores': scores_data})
 
 if __name__ == '__main__':
     app.run(debug=True)
