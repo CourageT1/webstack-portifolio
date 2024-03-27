@@ -16,6 +16,7 @@ from flask_login import LoginManager, UserMixin, login_user, logout_user, login_
 from flask_bcrypt import Bcrypt
 from werkzeug.security import generate_password_hash
 from datetime import datetime
+import questions
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///quiz_app.db'
@@ -119,6 +120,33 @@ def logout():
     """User logout."""
     logout_user()
     return redirect(url_for('index'))
+
+
+# Route to render the Football quiz page
+@app.route('/football')
+@login_required
+def football():
+    """Render Football Quiz page."""
+    questions = questions.get_football_questions()
+    return render_template('football.html', questions=questions)
+
+
+# Route to render the Cricket quiz page
+@app.route('/cricket')
+@login_required
+def cricket():
+    """Render Cricket Quiz page."""
+    questions = questions.get_cricket_questions()
+    return render_template('cricket.html', questions=questions)
+
+# Route to render the Science quiz page
+@app.route('/science')
+@login_required
+def science():
+    """Render Science Quiz page."""
+    questions = questions.get_science_questions()
+    return render_template('science.html', questions=questions)
+
 
 
 # Index route
